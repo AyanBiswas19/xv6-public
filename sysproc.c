@@ -96,3 +96,12 @@ sys_halt(void)
   outb(0xf4, 0x00);
   return 0;
 }
+
+int 
+sys_waitx(void)
+{
+  int *wtime, *rtime;
+  argptr(0, (void*)&wtime, sizeof(int));
+  argptr(1, (void*)&rtime, sizeof(int));
+  return waitx(wtime,rtime);
+}
