@@ -105,3 +105,13 @@ sys_waitx(void)
   argptr(1, (void*)&rtime, sizeof(int));
   return waitx(wtime,rtime);
 }
+
+int
+sys_getpinfo(void)
+{
+  struct proc_stat *s;
+  int pid;
+  argint(0, &pid);
+  argptr(1, (void*)&s, sizeof(struct proc_stat *));
+  return getpinfo(pid,s);
+}

@@ -217,6 +217,9 @@ fork(void)
   np->rtime=0;
   np->etime=-1;
 
+  // Change: Initializing no. of runs
+  np->num_run=0;
+
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
@@ -345,7 +348,7 @@ scheduler(void)
       #ifdef DEFAULT
       if(p->state != RUNNABLE)
         continue;
-
+      //cprintf("Proc no: %d\n", p->pid);
       #else
       #ifdef FCFS
       if(ptable.proc->state != SLEEPING && initproc!=0){
@@ -381,6 +384,7 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
+      p->num_run=p->num_run+1;
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
@@ -632,4 +636,19 @@ waitx(int *wtime, int *rtime)
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
   }
+}
+
+int
+getpinfo(int pid, struct proc_stat *s)
+{
+  struct proc *p;
+  for(p=ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->pid==pid){
+      s->pid=pid;
+      s->runtime=p->rtime;
+      s->num_run=p->num_run;
+      return 1;
+    }
+  }
+  return 0;
 }
