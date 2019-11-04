@@ -341,8 +341,39 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      
+      #ifdef DEFAULT
       if(p->state != RUNNABLE)
         continue;
+
+      #else
+      #ifdef FCFS
+      if(ptable.proc->state != SLEEPING && initproc!=0){
+        while(ptable.proc->state != RUNNING){}
+        p=ptable.proc;
+      }
+      else{
+        struct proc *first=0;
+        if(p->state!=RUNNABLE)
+          continue;
+        if(!((ptable.proc+1)->pid > 1))
+          continue;
+        for(struct proc *s = ptable.proc + 1; s < &ptable.proc[NPROC]; s++){
+            if(first==0)
+            first=s;
+            else{
+              if(s->state==RUNNABLE && s->ctime < first->ctime)
+                first=s;
+            }
+        }
+        if(first!=0 && first->state==RUNNABLE){
+          p=first;
+        }
+        else
+          continue;
+     }
+      #endif
+      #endif
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
