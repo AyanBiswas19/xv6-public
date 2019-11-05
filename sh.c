@@ -133,7 +133,7 @@ runcmd(struct cmd *cmd)
 int
 getcmd(char *buf, int nbuf)
 {
-  printf(2, "$ ");
+  printf(2, "ayan's-xv6$ ");
   memset(buf, 0, nbuf);
   gets(buf, nbuf);
   if(buf[0] == 0) // EOF
@@ -154,6 +154,23 @@ main(void)
       break;
     }
   }
+
+  //Better know the scheme right?
+  #ifdef DEFAULT
+  printf(1,"Default Scheduling\n");
+  #else
+  #ifdef FCFS
+  printf(1,"FCFS Scheduling\n");
+  #else
+  #ifdef PRIORITY
+  printf(1,"PRIORITY Based Scheduling\n");
+  #else
+  #ifdef MLFQ
+  printf(1,"MLFQ Scheduling\n");
+  #endif
+  #endif
+  #endif
+  #endif
 
   // Read and run input commands.
   while(getcmd(buf, sizeof(buf)) >= 0){
