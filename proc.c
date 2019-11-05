@@ -340,6 +340,9 @@ scheduler(void)
   for(;;){
     // Enable interrupts on this processor.
     sti();
+    #ifdef FCFS
+    struct proc *minP=0;
+    #endif
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
@@ -351,30 +354,19 @@ scheduler(void)
       //cprintf("Proc no: %d\n", p->pid);
       #else
       #ifdef FCFS
-      if(ptable.proc->state != SLEEPING && initproc!=0){
-        while(ptable.proc->state != RUNNING){}
-        p=ptable.proc;
-      }
-      else{
-        struct proc *first=0;
-        if(p->state!=RUNNABLE)
-          continue;
-        if(!((ptable.proc+1)->pid > 1))
-          continue;
-        for(struct proc *s = ptable.proc + 1; s < &ptable.proc[NPROC]; s++){
-            if(first==0)
-            first=s;
-            else{
-              if(s->state==RUNNABLE && s->ctime < first->ctime)
-                first=s;
-            }
-        }
-        if(first!=0 && first->state==RUNNABLE){
-          p=first;
+      if(p->state != RUNNABLE)
+        continue;
+      if(p->pid > 1)
+      {
+        if (minP != 0){
+          if(p->ctime < minP->ctime)
+            minP = p;
         }
         else
-          continue;
-     }
+          minP = p;
+      }
+      if(minP != 0 && minP->state == RUNNABLE)
+        p = minP;
       #endif
       #endif
 
@@ -642,13 +634,16 @@ int
 getpinfo(int pid, struct proc_stat *s)
 {
   struct proc *p;
+  acquire(&ptable.lock);
   for(p=ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid==pid){
       s->pid=pid;
       s->runtime=p->rtime;
       s->num_run=p->num_run;
+      release(&ptable.lock);
       return 1;
     }
   }
+  release(&ptable.lock);
   return 0;
 }
