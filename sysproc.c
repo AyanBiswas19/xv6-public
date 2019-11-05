@@ -115,3 +115,12 @@ sys_getpinfo(void)
   argptr(1, (void*)&s, sizeof(struct proc_stat *));
   return getpinfo(pid,s);
 }
+
+int
+sys_setpriority(void)
+{
+  int pid,priority;
+  argint(0, &pid);
+  argint(1, &priority);
+  return setpriority(pid,priority);
+}

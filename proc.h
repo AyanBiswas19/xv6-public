@@ -53,6 +53,7 @@ struct proc {
   int etime;                   // End time
   int rtime;                   // Run time (Excluding wait time)
   int num_run;                 // No. of times a process is executed.
+  int priority;                // Priority of a process in case of priority based scheduling
 };
 
 struct proc_stat {
@@ -72,3 +73,4 @@ int ticks[5]; // number of ticks each process has received at each of the 5 prio
 void update_stats(void);
 int waitx(int *wtime, int *rtime);
 int getpinfo(int pid, struct proc_stat *s);
+int setpriority(int pid, int priority);

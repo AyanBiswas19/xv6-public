@@ -88,7 +88,9 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-
+  #ifdef PRIORITY
+  p->priority=60;
+  #endif
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -341,7 +343,7 @@ scheduler(void)
     // Enable interrupts on this processor.
     sti();
     #ifdef FCFS
-    struct proc *minP=0;
+    struct proc *earliest=0;
     #endif
 
     // Loop over process table looking for process to run.
@@ -358,15 +360,18 @@ scheduler(void)
         continue;
       if(p->pid > 1)
       {
-        if (minP != 0){
-          if(p->ctime < minP->ctime)
-            minP = p;
+        if (earliest != 0){
+          if(p->ctime < earliest->ctime)
+            earliest = p;
         }
         else
-          minP = p;
+          earliest = p;
       }
-      if(minP != 0 && minP->state == RUNNABLE)
-        p = minP;
+      if(earliest != 0 && earliest->state == RUNNABLE)
+        p = earliest;
+      #ifdef PRIORITY
+
+      #endif
       #endif
       #endif
 
@@ -640,6 +645,22 @@ getpinfo(int pid, struct proc_stat *s)
       s->pid=pid;
       s->runtime=p->rtime;
       s->num_run=p->num_run;
+      release(&ptable.lock);
+      return 1;
+    }
+  }
+  release(&ptable.lock);
+  return 0;
+}
+
+int setpriority(int pid, int priority){
+  if(!(priority>=0 && priority <=100))
+    return 2;
+  struct proc *p;
+  acquire(&ptable.lock);
+  for(p=ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->pid==pid){
+      p->priority=priority;
       release(&ptable.lock);
       return 1;
     }
