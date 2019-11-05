@@ -7,11 +7,11 @@
 
 #define N  1000
 
-void
-printf(int fd, const char *s, ...)
-{
-  write(fd, s, strlen(s));
-}
+// void
+// printf(int fd, const char *s, ...)
+// {
+//   write(fd, s, strlen(s));
+// }
 
 void
 forktest(void)
@@ -22,10 +22,13 @@ forktest(void)
 
   for(n=0; n<N; n++){
     pid = fork();
-    if(pid < 0)
+    if(pid < 0){
+      printf(1,"Prematurely Breaking\n");
       break;
+    }
     if(pid == 0)
       exit();
+    printf(1,"Pid =%d\n", pid);
   }
 
   if(n == N){

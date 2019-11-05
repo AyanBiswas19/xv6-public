@@ -88,9 +88,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-  #ifdef PRIORITY
   p->priority=60;
-  #endif
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -342,54 +340,51 @@ scheduler(void)
   for(;;){
     // Enable interrupts on this processor.
     sti();
-    #ifdef FCFS
-    struct proc *earliest=0;
-    #endif
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+
+    #ifdef DEFAULT
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      
-      #ifdef DEFAULT
       if(p->state != RUNNABLE)
         continue;
-      //cprintf("Proc no: %d\n", p->pid);
-      #else
-      #ifdef FCFS
-      if(p->state != RUNNABLE)
-        continue;
-      if(p->pid > 1)
-      {
-        if (earliest != 0){
-          if(p->ctime < earliest->ctime)
-            earliest = p;
-        }
-        else
-          earliest = p;
-      }
-      if(earliest != 0 && earliest->state == RUNNABLE)
-        p = earliest;
-      #ifdef PRIORITY
-
-      #endif
-      #endif
-      #endif
-
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      p->num_run=p->num_run+1;
-
       swtch(&(c->scheduler), p->context);
       switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
       c->proc = 0;
     }
+    #else
+
+    #ifdef FCFS
+    struct proc *earliest=0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE)
+        continue;
+      if(earliest){
+        if(p->ctime < earliest->ctime)
+          earliest=p;
+      }
+      else
+        earliest=p;
+    }
+    if(earliest!=0){
+      p=earliest;
+      c->proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      swtch(&(c->scheduler), p->context);
+      switchkvm();
+      c->proc = 0;
+    }
+    #else
+
+    #ifdef PRIORITY
+    #endif
+    #endif
+    #endif
+
     release(&ptable.lock);
 
   }
@@ -655,16 +650,21 @@ getpinfo(int pid, struct proc_stat *s)
 
 int setpriority(int pid, int priority){
   if(!(priority>=0 && priority <=100))
-    return 2;
+    return 101;
+  int yield_flag=0;
   struct proc *p;
   acquire(&ptable.lock);
   for(p=ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid==pid){
+      if(p->priority > priority)
+        yield_flag=1;
       p->priority=priority;
       release(&ptable.lock);
+      if(yield_flag)
+        yield();
       return 1;
     }
   }
   release(&ptable.lock);
-  return 0;
+  return 101;
 }

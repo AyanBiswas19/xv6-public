@@ -12,13 +12,13 @@ int main(int argc, char *argv[]){
 		pid=pid*10+((int)(*c)-(int)'0');
 	for(char *c=argv[2];*c;c++)
 		priority=priority*10+((int)(*c)-(int)'0');
-	printf(1,"Searching for process %d.\n", pid);
-	int r=setpriority(pid,priority);
-	if(r==2){
-		printf(1,"Invalid Priority\n");
+	if(!(priority <= 100 && priority >= 0)){
+		printf(1,"Invalid priority\n");
 		exit();
 	}
-	if(r==0){
+	printf(1,"Searching for process %d.\n", pid);
+	int r=setpriority(pid,priority);
+	if(r==101){
 		printf(1,"Unable to set priority.\n");
 		exit();
 	}
