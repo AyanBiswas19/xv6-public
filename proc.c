@@ -333,7 +333,7 @@ wait(void)
 void
 scheduler(void)
 {
-  struct proc *p;
+  struct proc *p=0;
   struct cpu *c = mycpu();
   c->proc = 0;
   
@@ -381,6 +381,27 @@ scheduler(void)
     #else
 
     #ifdef PRIORITY
+    if(p==0)
+      p=ptable.proc;
+    struct proc *l=leftmax(p); // Left is inclusive of p
+    struct proc *r=rightmax(p);
+    if(!l || !r){
+      p=(l==0)?r:l;
+    }
+    else{
+      if(r->priority <= l->priority)
+        p=r;
+      else
+        p=l;
+    }
+    if(p!=0){
+      c->proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      swtch(&(c->scheduler), p->context);
+      switchkvm();
+      c->proc = 0;
+    }
     #endif
     #endif
     #endif
@@ -667,4 +688,35 @@ int setpriority(int pid, int priority){
   }
   release(&ptable.lock);
   return 101;
+}
+
+struct proc *leftmax(struct proc *s){
+  struct proc *p=0,*max=0;
+  for(p=ptable.proc;p<=s;p++){
+    if(p->state!=RUNNABLE)
+      continue;
+    if(max==0){
+      max=p;
+    }
+    else
+      if(p->priority < max->priority)
+        max=p;
+  }
+  return max;
+}
+
+struct proc *rightmax(struct proc *s){
+  struct proc *r,*max=0;
+  for(r=s+1; r < &ptable.proc[NPROC];r++){
+    if(r->state!=RUNNABLE)
+      continue;
+    if(max==0){
+      max=r;
+    }
+    else{
+      if(r->priority < max->priority)
+        max=r;
+    }
+  }
+  return max;
 }

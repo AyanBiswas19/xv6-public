@@ -74,3 +74,5 @@ void update_stats(void);
 int waitx(int *wtime, int *rtime);
 int getpinfo(int pid, struct proc_stat *s);
 int setpriority(int pid, int priority);
+struct proc *leftmax(struct proc *s);
+struct proc *rightmax(struct proc *s);
