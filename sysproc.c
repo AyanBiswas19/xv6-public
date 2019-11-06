@@ -124,3 +124,7 @@ sys_setpriority(void)
   argint(1, &priority);
   return setpriority(pid,priority);
 }
+
+int sys_getticks(){
+  return getticks();
+}

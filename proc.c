@@ -89,6 +89,9 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   p->priority=60;
+  p->current_queue=0;
+  for(int i=0;i<NQUEUES;i++)
+    p->ticks[i]=0;
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -402,6 +405,36 @@ scheduler(void)
       switchkvm();
       c->proc = 0;
     }
+    #else
+
+    #ifdef MLFQ
+    p=0;
+    int is_empty=0;
+    for(struct proc *s=ptable.proc+2;s>=ptable.proc;s--)
+      s->current_queue=0;
+    //Gotta select a process
+    for(int i=0;i<NQUEUES;i+=(is_empty)?1:0){
+      //Iterating over the queues
+      for(p=ptable.proc;p < &ptable.proc[NPROC] ; p++){
+        if(p==ptable.proc)
+          is_empty=1;
+        if(p->state!=RUNNABLE || p->current_queue!=i)
+          continue;
+        is_empty=0;
+        c->proc = p;
+        switchuvm(p);
+        //cprintf("executing pid %d: %s\n", p->pid, p->name);
+        p->state = RUNNING;
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+        c->proc = 0;
+
+        if(p->current_queue < NQUEUES - 1)
+          p->current_queue=p->current_queue+1;
+      }
+    }
+
+    #endif
     #endif
     #endif
     #endif
@@ -580,6 +613,10 @@ procdump(void)
     else
       state = "???";
     cprintf("%d %s %s", p->pid, state, p->name);
+    //Queue printf is my addition
+    #ifdef MLFQ
+    cprintf(" Queue= %d",p->current_queue);
+    #endif
     if(p->state == SLEEPING){
       getcallerpcs((uint*)p->context->ebp+2, pc);
       for(i=0; i<10 && pc[i] != 0; i++)
@@ -720,3 +757,21 @@ struct proc *rightmax(struct proc *s){
   }
   return max;
 }
+
+int getticks(void){
+  return ticks;
+}
+
+// void update_queues(int Q[NQUEUES][NPROC]){
+//   struct proc *p=0;
+//   for(int i=0;i<NQUEUES;i++){
+//     for(int j=0;i<NPROC;i++){
+//       for(p=ptable.proc; p<&ptable.proc[NPROC] ; p++){
+//         if(p->pid==Q[i][j])
+//           break;
+//       }
+//       if(p==(&ptable.proc[NPROC]))
+//         Q[i][j]=-1;
+//     }
+//   }
+// }
