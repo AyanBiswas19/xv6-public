@@ -28,6 +28,7 @@ int halt(void);
 int waitx(int *a, int *b);
 int getpinfo(int pid, struct proc_stat * s);
 int setpriority(int pid, int priority);
+int printptable(void);
 
 // ulib.c
 int stat(const char*, struct stat*);

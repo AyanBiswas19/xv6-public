@@ -219,6 +219,7 @@ fork(void)
   np->ctime=ticks;
   np->rtime=0;
   np->etime=-1;
+  np->wtime=0;
 
   // Change: Initializing no. of runs
   np->num_run=0;
@@ -353,6 +354,7 @@ scheduler(void)
         continue;
       c->proc = p;
       switchuvm(p);
+      p->num_run++;
       p->state = RUNNING;
       swtch(&(c->scheduler), p->context);
       switchkvm();
@@ -376,6 +378,7 @@ scheduler(void)
       p=earliest;
       c->proc = p;
       switchuvm(p);
+      p->num_run++;
       p->state = RUNNING;
       swtch(&(c->scheduler), p->context);
       switchkvm();
@@ -400,6 +403,7 @@ scheduler(void)
     if(p!=0){
       c->proc = p;
       switchuvm(p);
+      p->num_run++;
       p->state = RUNNING;
       swtch(&(c->scheduler), p->context);
       switchkvm();
@@ -410,6 +414,7 @@ scheduler(void)
     #ifdef MLFQ
     p=0;
     int is_empty=0;
+    int k;
     for(struct proc *s=ptable.proc+2;s>=ptable.proc;s--)
       s->current_queue=0;
     //Gotta select a process
@@ -421,15 +426,17 @@ scheduler(void)
         if(p->state!=RUNNABLE || p->current_queue!=i)
           continue;
         is_empty=0;
-        c->proc = p;
-        switchuvm(p);
-        //cprintf("executing pid %d: %s\n", p->pid, p->name);
-        p->state = RUNNING;
-        swtch(&(c->scheduler), p->context);
-        switchkvm();
-        c->proc = 0;
-
-        if(p->current_queue < NQUEUES - 1)
+        for(k=0 ; k < pow(2,i) && p->state==RUNNABLE ; k++){
+          c->proc = p;
+          switchuvm(p);
+          p->num_run++;
+          //cprintf("executing pid %d: %s\n", p->pid, p->name);
+          p->state = RUNNING;
+          swtch(&(c->scheduler), p->context);
+          switchkvm();
+          c->proc = 0;
+        }
+        if(p->current_queue < NQUEUES - 1 && k < pow(2,i))
           p->current_queue=p->current_queue+1;
       }
     }
@@ -626,16 +633,20 @@ procdump(void)
   }
 }
 
-void update_stats() {
+void update_stats(void) {
   struct proc *p;
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    switch(p->state) {
-      case RUNNING:
+    if(p->state == RUNNING) {
         p->rtime++;
-        break;
-      default:
-        ;
+        p->ticks[p->current_queue]+=1;
+    }
+    else
+      p->wtime++;
+    if(p->wtime >= QMAXWAIT){
+      p->wtime=0;
+      if(p->current_queue)
+        p->current_queue=p->current_queue-1;
     }
   }
   release(&ptable.lock);
@@ -698,6 +709,9 @@ getpinfo(int pid, struct proc_stat *s)
       s->pid=pid;
       s->runtime=p->rtime;
       s->num_run=p->num_run;
+      s->current_queue=p->current_queue;
+      for(int i=0; i < NQUEUES; i++)
+        s->ticks[i]=p->ticks[i];
       release(&ptable.lock);
       return 1;
     }
@@ -762,6 +776,13 @@ int getticks(void){
   return ticks;
 }
 
+int pow(int a, int b){
+  int r=1;
+  for(int i=1;i<=b;i++)
+    r=r*a;
+  return r;
+}
+
 // void update_queues(int Q[NQUEUES][NPROC]){
 //   struct proc *p=0;
 //   for(int i=0;i<NQUEUES;i++){
@@ -775,3 +796,25 @@ int getticks(void){
 //     }
 //   }
 // }
+
+int printptable(void){
+  struct proc *p;
+  for(p=ptable.proc;p<&ptable.proc[NPROC];p++){
+    if(p->state==UNUSED)
+      continue;
+    cprintf("Process Name= %s\t Pid = %d\t", p->name, p->pid);
+    #ifdef PRIORITY
+    cprintf("Priority = %d\t",p->priority);
+    #else
+    #ifdef MLFQ
+    cprintf("Current Queue = %d\t", p->current_queue);
+    cprintf("Ticks in each queue:\t");
+    for(int i=0; i<NQUEUES; i++){
+      cprintf("%d\t",p->ticks[i]);
+    }
+    #endif
+    #endif
+    cprintf("\n");
+  }
+  return 1;
+}

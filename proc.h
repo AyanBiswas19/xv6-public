@@ -52,6 +52,7 @@ struct proc {
   int ctime;                   // Creation time
   int etime;                   // End time
   int rtime;                   // Run time (Excluding wait time)
+  int wtime;                   // Wait time
   int num_run;                 // No. of times a process is executed.
   int priority;                // Priority of a process in case of priority based scheduling
   int current_queue;           // Current Queue in MLFQ
@@ -79,4 +80,6 @@ int setpriority(int pid, int priority);
 struct proc *leftmax(struct proc *s);
 struct proc *rightmax(struct proc *s);
 int getticks(void);
+int pow(int a, int b);
+int printptable(void);
 //void update_queues(int Q[NQUEUES][NPROC]);

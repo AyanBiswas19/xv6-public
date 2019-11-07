@@ -17,5 +17,12 @@ int main(int argc, char *argv[]){
 		exit();
 	}
 	printf(1,"Process info:\nPid = %d, Runtime= %d\nNumber of runs = %d\n",s.pid,s.runtime,s.num_run);
+	#ifdef MLFQ
+	printf(1,"Current Queue = %d\n", s.current_queue);
+	printf(1,"Ticks in each level (0-4) : \n");
+	for(int i=0; i<5; i++)
+		printf(1,"%d ", s.ticks[i]);
+	printf(1,"\n");
+	#endif
 	exit();
 }

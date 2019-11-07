@@ -25,3 +25,4 @@
 #define SYS_getpinfo  24
 #define SYS_setpriority  25
 #define SYS_getticks	26
+#define SYS_printptable 27

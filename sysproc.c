@@ -125,6 +125,10 @@ sys_setpriority(void)
   return setpriority(pid,priority);
 }
 
-int sys_getticks(){
+int sys_getticks(void){
   return getticks();
+}
+
+int sys_printptable(void){
+  return printptable();
 }
