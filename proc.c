@@ -14,6 +14,10 @@ struct {
 
 static struct proc *initproc;
 
+#ifdef MLFQ
+static int L0notempty;
+#endif
+
 int nextpid = 1;
 extern void forkret(void);
 extern void trapret(void);
@@ -341,6 +345,12 @@ scheduler(void)
   struct cpu *c = mycpu();
   c->proc = 0;
   
+  #ifdef MLFQ
+  acquire(&ptable.lock);
+  L0notempty=1;
+  release(&ptable.lock);
+  #endif
+
   for(;;){
     // Enable interrupts on this processor.
     sti();
@@ -421,6 +431,10 @@ scheduler(void)
     for(int i=0;i<NQUEUES;i+=(is_empty)?1:0){
       //Iterating over the queues
       for(p=ptable.proc;p < &ptable.proc[NPROC] ; p++){
+        //cprintf("i=%d\n",i);
+        //If higher priority process exists we go for it, so back to first queue.
+        //cprintf("Running the first queue\n");
+
         if(p==ptable.proc)
           is_empty=1;
         if(p->state!=RUNNABLE || p->current_queue!=i)
@@ -436,8 +450,15 @@ scheduler(void)
           switchkvm();
           c->proc = 0;
         }
-        if(p->current_queue < NQUEUES - 1 && k < pow(2,i))
+        if(p->current_queue < NQUEUES - 1)
           p->current_queue=p->current_queue+1;
+
+        if( i != (NQUEUES-1) && L0notempty && i!=0){
+          //cprintf("Return to first queue triggered.\n" );
+          is_empty=0;
+          i=0;
+          break;
+        }
       }
     }
 
@@ -636,6 +657,9 @@ procdump(void)
 void update_stats(void) {
   struct proc *p;
   acquire(&ptable.lock);
+  #ifdef MLFQ
+  L0notempty=0;
+  #endif
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == RUNNING) {
         p->rtime++;
@@ -643,11 +667,15 @@ void update_stats(void) {
     }
     else
       p->wtime++;
+    #ifdef MLFQ
     if(p->wtime >= QMAXWAIT){
       p->wtime=0;
       if(p->current_queue)
         p->current_queue=p->current_queue-1;
     }
+    if(p->state==RUNNABLE && p->current_queue==0)
+      L0notempty=1;
+    #endif
   }
   release(&ptable.lock);
 }

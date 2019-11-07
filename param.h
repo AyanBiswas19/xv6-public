@@ -13,4 +13,4 @@
 #define FSSIZE       1000  // size of file system in blocks
 
 #define NQUEUES		 5	 // No of queues for MLFQ Scheduling
-#define QMAXWAIT	 100 // Max wait time before aging in ticks
+#define QMAXWAIT	 200 // Max wait time before aging in ticks
